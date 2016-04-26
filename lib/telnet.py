@@ -34,6 +34,7 @@ BASENAME = 'vSPC.py'
 import logging
 import struct
 import time
+from math import floor
 
 from telnetlib import *
 from telnetlib import IAC,DO,DONT,WILL,WONT,BINARY,ECHO,SGA,SB,SE,NOOPT,theNULL
@@ -42,6 +43,8 @@ from telnetlib import IAC,DO,DONT,WILL,WONT,BINARY,ECHO,SGA,SB,SE,NOOPT,theNULL
 # the counter. This is mainly to deal with "raw" connections (like
 # gdb) that don't negotiate telnet options at all.
 UNACK_TIMEOUT = 0.5
+
+DEFAULT_VM_TX_PACKET_LEN = 8  # how many chars to send in each packet
 
 VMWARE_EXT = chr(232) # VMWARE-TELNET-EXT
 
@@ -318,11 +321,38 @@ class VMTelnetServer(TelnetServer):
     def __init__(self, sock,
                  server_opts = (BINARY, SGA, ECHO),
                  client_opts = (BINARY, SGA, VMWARE_EXT),
-                 handler = None):
+                 handler = None,
+                 tx_rate = 0):
         TelnetServer.__init__(self, sock, server_opts, client_opts)
         self.handler = handler or VMExtHandler()
         self.name = None
         self.uuid = None
+        self.last_tx_time = 0
+        self.tx_wait_time = 0
+        self.tx_packet_length = DEFAULT_VM_TX_PACKET_LEN
+        if tx_rate > 0:
+            _now = time.time()
+            assert floor(_now) != _now, "System does not support millisecond resolution."
+            # 8 + 2 approximately is one byte plus 2 control bits is baud
+            self.tx_wait_time = int(1000.00 / (tx_rate / 10 / self.tx_packet_length)) + 1
+            logging.debug(
+                'Calculated packet wait is %d millisecond(s) for packets of %d chars.',
+                self.tx_wait_time,
+                self.tx_packet_length
+            )
+
+    def send_buffered(self, s=''):
+        if self.tx_wait_time <= 0:
+            return TelnetServer.send_buffered(self, s)
+        else:
+            self.send_buffer += s
+            now = time.time() * 1000
+            if abs(now - self.last_tx_time) >= self.tx_wait_time:
+                # abs is for the case when VM's system time sync drifts both directions
+                nbytes = self.sock.send(self.send_buffer[:self.tx_packet_length])
+                self.send_buffer = self.send_buffer[nbytes:]
+                self.last_tx_time = now
+            return len(self.send_buffer) > 0
 
     def _send_vmware(self, s):
         self.sock.sendall(IAC + SB + VMWARE_EXT + s + IAC + SE)

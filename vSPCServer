@@ -116,8 +116,11 @@ def get_option_parser(add_help_option=True):
     parser.add_option("--no-fork", action='store_false', dest='fork', default=True,
                       help="Don't daemonize")
     parser.add_option("--backend", dest='backend_type_name',
-                      default='vSPC.backend:vSPCBackendMemory', type='string',
-                      help="Name of custom backend class")
+                      default='Memory', type='string',
+                      help=("Name of backend class, one of: Memory, File. "
+                            "Default is %default. A custom backend can be "
+                            "specified in package.module:class format "
+                            "(eg: vSPC.backend:vSPCBackendMemory)."))
     parser.add_option("-f", "--persist-file", dest="persist_file",
                       help="DBM file prefix to persist mappings to (.dat/.dir may follow. "
                       "This is shorthand for --backend File --file FILE.")
@@ -158,18 +161,23 @@ def main():
         handler.setFormatter(formatter)
         logger.addHandler(handler)
 
-    module_name, _, class_name = options.backend_type_name.partition(':')
-    assert module_name, 'Empty backend module name.'
-    assert class_name, 'Empty backend class name.'
+    if ':' in options.backend_type_name:
+        module_name, _, class_name = options.backend_type_name.partition(':')
+        assert module_name, 'Empty backend module name.'
+        assert class_name, 'Empty backend class name.'
+    else:
+        module_name = 'vSPC.backend'
+        class_name = 'vSPCBackend' + options.backend_type_name
+
     try:
         __import__(module_name)
         module = sys.modules[module_name]
         backend_class = getattr(module, class_name)
         backend = backend_class()
-        logger.debug('Loaded backend "%s".', options.backend_type_name)
+        logger.debug('Loaded backend "%s:%s".', module_name, class_name)
     except (ImportError, AttributeError):
         raise SystemExit(
-           'Could not find backend class "%s".' % options.backend_type_name
+           'Could not find backend class "%s:%s".' % (module_name, class_name)
         )
 
     # reparsing sys args with options added to regular parser

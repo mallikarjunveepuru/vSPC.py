@@ -140,10 +140,9 @@ binary distribution
 /path/to/your/python setup.py bdist
 ```
 
-build rpm
+build RPM
 ```
-/path/to/your/python setup.py sdist
-rpmbuild -ta vSPC-<version>.tar.gz
+/path/to/your/python setup.py bdist_rpm
 ```
 
 # Authors

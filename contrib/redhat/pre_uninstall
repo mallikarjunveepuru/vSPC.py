@@ -1,0 +1,11 @@
+## According to https://fedoraproject.org/wiki/Packaging:ScriptletSnippets
+## the first argument of 1 means upgrade, and 0 means removal
+## so delete user only when the package is erased and not upgraded.
+if [ $1 -eq 0 ]; then
+    service vSPCServer stop
+    killall -u vspc -KILL
+    # the following requires the files still to be present in
+    # the /etc/init.d/  thus the script is in pre-uninstall and not post
+    chkconfig --del vSPCServer
+    userdel -fr vspc
+fi

@@ -82,7 +82,7 @@ class vSPC(Poller, VMExtHandler):
 
     def __init__(self, proxy_port, admin_port, proxy_iface, admin_iface,
                  vm_port_start, vm_iface, vm_expire_time, backend, use_ssl=False,
-                 ssl_cert=None, ssl_key=None):
+                 ssl_cert=None, ssl_key=None, vm_tx_rate=0):
         Poller.__init__(self)
 
         self.proxy_port = proxy_port
@@ -103,6 +103,7 @@ class vSPC(Poller, VMExtHandler):
         self.do_ssl = use_ssl
         self.ssl_cert = ssl_cert
         self.ssl_key = ssl_key
+        self.vm_tx_rate = vm_tx_rate
 
         self.task_queue = Queue.Queue()
         self.task_queue_threads = []
@@ -190,7 +191,11 @@ class vSPC(Poller, VMExtHandler):
         sock.setblocking(0)
         sock.setsockopt(socket.SOL_TCP, socket.TCP_NODELAY, 1)
         try:
-            vt = VMTelnetServer(sock, handler = self)
+            vt = VMTelnetServer(
+                sock,
+                handler=self,
+                tx_rate=self.vm_tx_rate
+            )
             self.add_reader(vt, self.queue_new_vm_data)
         except socket.error, err:
             # If there was a socket error on initialization, capture the

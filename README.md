@@ -124,8 +124,10 @@ means that no initial mappings are loaded on startup and all state is
 retained in memory alone. The other builtin backend is the "File"
 backend, which can be configured like so: --backend File -f /tmp/vSPC.
 
-If '--backend Foo' is given but no builtin backend Foo exists, vSPC.py
-tries to import module vSPCBackendFoo, looking for class vSPCBackendFoo.
+A custom backend can be specified by passing in a package.module:class name
+string. For example: `--backend vSPC.backend:vSPCBackendMemory`. Your custom
+backend should inherit from vSPC.backend:vSPCBackendMemory.
+
 Use --help with the desired --backend for help using that backend.
 
 # Building the distribution
@@ -140,10 +142,9 @@ binary distribution
 /path/to/your/python setup.py bdist
 ```
 
-build rpm
+build RPM
 ```
-/path/to/your/python setup.py sdist
-rpmbuild -ta vSPC-<version>.tar.gz
+/path/to/your/python setup.py bdist_rpm
 ```
 
 # Authors

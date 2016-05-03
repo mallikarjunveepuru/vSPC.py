@@ -1,0 +1,8 @@
+# Byte-compiled files
+*.pyc
+
+# Artifacts left after running python setup.py
+dist/
+build/
+*.egg-info/
+*.egg

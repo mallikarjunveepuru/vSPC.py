@@ -33,15 +33,15 @@ import getopt
 import logging
 import optparse
 import os
-import cPickle as pickle
+import pickle as pickle
 import signal
 import socket
 import string
 import sys
 import threading
-import Queue
+import queue
 
-from admin import Q_VERS, Q_NAME, Q_UUID, Q_PORT, Q_OK, Q_VM_NOTFOUND, Q_LOCK_EXCL, Q_LOCK_WRITE, Q_LOCK_FFA, Q_LOCK_FFAR, Q_LOCK_BAD, Q_LOCK_FAILED
+from .admin import Q_VERS, Q_NAME, Q_UUID, Q_PORT, Q_OK, Q_VM_NOTFOUND, Q_LOCK_EXCL, Q_LOCK_WRITE, Q_LOCK_FFA, Q_LOCK_FFAR, Q_LOCK_BAD, Q_LOCK_FAILED
 
 class vSPCBackendMemory:
     ADMIN_THREADS = 4
@@ -61,15 +61,15 @@ class vSPCBackendMemory:
             self.lock = threading.Lock()
 
     def __init__(self):
-        self.admin_queue = Queue.Queue()
+        self.admin_queue = queue.Queue()
         self.admin_threads = []
 
-        self.observer_queue = Queue.Queue()
+        self.observer_queue = queue.Queue()
         self.observed_vms_lock = threading.Lock()
         self.observed_vms = {}
         self.observed_vms_loaded = False
 
-        self.hook_queue = Queue.Queue()
+        self.hook_queue = queue.Queue()
 
     def get_option_group(self, parser):
         group = optparse.OptionGroup(parser, "Memory backend options",
@@ -100,7 +100,7 @@ class vSPCBackendMemory:
         while True:
             try:
                 queue.get()()
-            except Exception, e:
+            except Exception as e:
                 logging.exception("Worker exception caught")
 
     def admin_run(self):
@@ -134,7 +134,7 @@ class vSPCBackendMemory:
         with self.observed_vms_lock:
             vms = self.observed_vms.copy()
 
-        return vms.values()
+        return list(vms.values())
 
     def notify_vm(self, uuid, name, port):
         self.observer_queue.put(lambda: self.vm(uuid, name, port))
@@ -184,7 +184,7 @@ class vSPCBackendMemory:
 
     def vm_del(self, uuid):
         with self.observed_vms_lock:
-            if self.observed_vms.has_key(uuid):
+            if uuid in self.observed_vms:
                 del self.observed_vms[uuid]
 
         self.hook_queue.put(lambda: self.vm_del_hook(uuid))
@@ -252,7 +252,7 @@ class vSPCBackendMemory:
             else:
                 pickle.dump(Exception('No common version'), sockfile)
             sockfile.flush()
-        except Exception, e:
+        except Exception as e:
             logging.debug('handle_query_socket exception: %s', str(e))
 
     def format_vm_listing(self):
@@ -384,7 +384,7 @@ class vSPCBackendFile(vSPCBackendMemory):
 
     def load_vms(self):
         vms = {}
-        for v in self.shelf.values():
+        for v in list(self.shelf.values()):
             vms[v[P_UUID]] = \
                 self.OVm(uuid = v[P_UUID], name = v[P_NAME], port = v[P_PORT])
 
@@ -422,7 +422,7 @@ class vSPCBackendLogging(vSPCBackendMemory):
         self.scrollback_limit = options.context
 
     def shutdown(self):
-        for k, f in self.logfiles.iteritems():
+        for k, f in self.logfiles.items():
             f.close()
 
     def add_scrollback(self, uuid, msg):
@@ -442,7 +442,7 @@ class vSPCBackendLogging(vSPCBackendMemory):
             f.write(msg)
             f.flush()
             self.add_scrollback(uuid, msg)
-        except ValueError, e:
+        except ValueError as e:
             # we tried to write to a closed fd, which means that we were
             # told to reload our log files between when we got the file
             # descriptor and when we tried to write to it. if we try
@@ -479,7 +479,7 @@ class vSPCBackendLogging(vSPCBackendMemory):
         return self.logfiles[uuid]
 
     def reload(self):
-        for k, f in self.logfiles.iteritems():
+        for k, f in self.logfiles.items():
             f.close()
             del(self.logfiles[k])
             self.logfiles[k] = self.file_for_vm(self.vm_names[k], k)

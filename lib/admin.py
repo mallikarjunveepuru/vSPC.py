@@ -29,15 +29,15 @@
 # authors and should not be interpreted as representing official policies, either expressed
 # or implied, of <copyright holder>.
 
-import cPickle as pickle
+import pickle as pickle
 import socket
 import sys
 
 from telnetlib import BINARY, SGA
 
-from telnet import TelnetServer
-from poll import Poller
-from util import prepare_terminal, restore_terminal
+from .telnet import TelnetServer
+from .poll import Poller
+from .util import prepare_terminal, restore_terminal
 
 # Query protocol
 Q_VERS        = 2
@@ -222,7 +222,7 @@ class AdminProtocolClient(Poller):
             out = "%s:%s" % (vm[Q_NAME], vm[Q_UUID])
             if vm[Q_PORT] is not None:
                 out += ":%d" % vm[Q_PORT]
-            print out
+            print(out)
 
     def prepare_terminal(self):
         (oldterm, oldflags) = prepare_terminal(self.command_source)
@@ -250,7 +250,7 @@ class AdminProtocolClient(Poller):
             self.add_reader(self.vspc_socket, self.new_server_data)
             self.add_reader(self.command_source, self.new_client_data)
             self.run_forever()
-        except Exception, e:
+        except Exception as e:
             sys.stderr.write("Caught exception %s, closing" % e)
         finally:
             self.quit()

@@ -27,7 +27,7 @@
 # The views and conclusions contained in the software and documentation are those of the
 # authors and should not be interpreted as representing official policies, either expressed
 # or implied, of <copyright holder>.
-from __future__ import with_statement
+
 
 __author__ = "Zachary M. Loafman"
 __copyright__ = "Copyright (C) 2011 Isilon Systems LLC."
@@ -39,7 +39,7 @@ import socket
 import ssl
 import time
 import threading
-import Queue
+import queue
 
 from telnetlib import BINARY, SGA, ECHO
 
@@ -105,7 +105,7 @@ class vSPC(Poller, VMExtHandler):
         self.ssl_key = ssl_key
         self.vm_tx_rate = vm_tx_rate
 
-        self.task_queue = Queue.Queue()
+        self.task_queue = queue.Queue()
         self.task_queue_threads = []
 
         # raise the open files soft limit up to the hard limit to maximize
@@ -129,7 +129,7 @@ class vSPC(Poller, VMExtHandler):
         while True:
             try:
                 queue.get()()
-            except Exception, e:
+            except Exception as e:
                 logging.exception("Worker exception caught")
 
     def task_queue_run(self):
@@ -158,7 +158,7 @@ class vSPC(Poller, VMExtHandler):
 
         vm_connections = len(self.vms)
         client_connections = 0
-        for uuid in self.vms.keys():
+        for uuid in list(self.vms.keys()):
             try:
                 vm = self.vms[uuid]
                 client_connections += len(vm.clients)
@@ -197,7 +197,7 @@ class vSPC(Poller, VMExtHandler):
                 tx_rate=self.vm_tx_rate
             )
             self.add_reader(vt, self.queue_new_vm_data)
-        except socket.error, err:
+        except socket.error as err:
             # If there was a socket error on initialization, capture the
             # exception to avoid logging a traceback.
             logging.debug("uninitialized VM socket error")
@@ -223,7 +223,7 @@ class vSPC(Poller, VMExtHandler):
         try:
             client = self.Client(sock)
             client.uuid = vm.uuid
-        except socket.error, err:
+        except socket.error as err:
             # If there was a socket error on initialization, capture the
             # exception to avoid logging a traceback.
             logging.debug("uninitialized client socket error")
@@ -287,7 +287,7 @@ class vSPC(Poller, VMExtHandler):
             self.add_reader(vt, self.queue_new_vm_data)
             return
 
-        if not vt.uuid or not self.vms.has_key(vt.uuid):
+        if not vt.uuid or vt.uuid not in self.vms:
             # In limbo, no one can hear you scream
             self.add_reader(vt, self.queue_new_vm_data)
             return
@@ -299,7 +299,7 @@ class vSPC(Poller, VMExtHandler):
         for cl in clients:
             try:
                 self.send_buffered(cl, s)
-            except (EOFError, IOError, socket.error), e:
+            except (EOFError, IOError, socket.error) as e:
                 logging.debug('cl.socket send error: %s', str(e))
                 self.abort_client_connection(cl)
         self.add_reader(vt, self.queue_new_vm_data)
@@ -352,7 +352,7 @@ class vSPC(Poller, VMExtHandler):
         for vt in self.vms[client.uuid].vts:
             try:
                 self.send_buffered(vt, s)
-            except (EOFError, IOError, socket.error), e:
+            except (EOFError, IOError, socket.error) as e:
                 logging.debug('cl.socket send error: %s', str(e))
         self.add_reader(client, self.queue_new_client_data)
 
@@ -386,7 +386,7 @@ class vSPC(Poller, VMExtHandler):
         self.new_vm(vt.uuid, vt.name, vts = [vt])
 
     def handle_vc_uuid(self, vt):
-        if not self.vms.has_key(vt.uuid):
+        if vt.uuid not in self.vms:
             self._add_vm_when_ready(vt)
             return
 
@@ -400,7 +400,7 @@ class vSPC(Poller, VMExtHandler):
         logging.info('VM %s (uuid %s) reconnected/vmotion', vm.name, vm.uuid)
 
     def handle_vm_name(self, vt):
-        if not self.vms.has_key(vt.uuid):
+        if vt.uuid not in self.vms:
             self._add_vm_when_ready(vt)
             return
 
@@ -424,7 +424,7 @@ class vSPC(Poller, VMExtHandler):
         return True
 
     def handle_vmotion_peer(self, vt, data):
-        if not self.vmotions.has_key(data):
+        if data not in self.vmotions:
             logging.debug('peer cookie %s doesn\'t exist', hexdump(data))
             return False
 
@@ -503,7 +503,7 @@ class vSPC(Poller, VMExtHandler):
 
         orphans = self.orphans[:]
         for uuid in orphans:
-            if not self.vms.has_key(uuid):
+            if uuid not in self.vms:
                 self.orphans.remove(uuid)
                 continue
             vm = self.vms[uuid]
@@ -529,7 +529,7 @@ class vSPC(Poller, VMExtHandler):
             orphans = self.orphans[:]
             orphans.sort(key=lambda uuid: self.vms[uuid].last_time,
                          reverse=True)
-            for index in xrange(min(connection_overage, len(orphans))):
+            for index in range(min(connection_overage, len(orphans))):
                 uuid = orphans[index]
                 vm = self.vms[uuid]
                 self.expire_orphan(vm)
@@ -564,13 +564,13 @@ class vSPC(Poller, VMExtHandler):
             vm.port = port
         else:
             p = self.vm_port_next
-            while self.ports.has_key(p):
+            while p in self.ports:
                 p += 1
 
             self.vm_port_next = p + 1
             vm.port = p
 
-        assert not self.ports.has_key(vm.port)
+        assert vm.port not in self.ports
         self.ports[vm.port] = vm.uuid
 
         vm.listener = openport(vm.port, self.vm_iface)

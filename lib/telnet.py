@@ -38,6 +38,7 @@ from math import floor
 
 from telnetlib import *
 from telnetlib import IAC,DO,DONT,WILL,WONT,BINARY,ECHO,SGA,SB,SE,NOOPT,theNULL
+from functools import reduce
 
 # How long to wait for an option response. Any option response resets
 # the counter. This is mainly to deal with "raw" connections (like
@@ -278,7 +279,7 @@ class TelnetServer(FixedTelnet):
     def negotiation_done(self):
         self.process_available()
         if self.unacked:
-            desc = map(lambda (x, y): (ord(x), ord(y)), self.unacked)
+            desc = [(ord(x_y[0]), ord(x_y[1])) for x_y in self.unacked]
             if time.time() > self.last_ack + UNACK_TIMEOUT:
                 logging.debug("timeout waiting for commands %s", desc)
                 self.unacked = []
@@ -358,7 +359,7 @@ class VMTelnetServer(TelnetServer):
         self.sock.sendall(IAC + SB + VMWARE_EXT + s + IAC + SE)
 
     def _handle_known_options(self, data):
-        logging.debug("client knows VM commands: %s", map(ord, data))
+        logging.debug("client knows VM commands: %s", list(map(ord, data)))
 
     def _handle_unknown_option(self, data):
         logging.debug("client doesn't know VM command %d, dropping",
@@ -443,7 +444,7 @@ class VMTelnetServer(TelnetServer):
         data = data[2:]
 
         handled = False
-        if EXT_SUPPORTED.has_key(subcmd):
+        if subcmd in EXT_SUPPORTED:
             meth = '_handle_%s' % EXT_SUPPORTED[subcmd]
             if hasattr(self, meth):
                 getattr(self, meth)(data)
@@ -469,7 +470,7 @@ class VMTelnetProxyClient(TelnetServer):
         self.sock.sendall(IAC + SB + VMWARE_EXT + s + IAC + SE)
 
     def _handle_known_options(self, data):
-        logging.debug("client knows VM commands: %s", map(ord, data))
+        logging.debug("client knows VM commands: %s", list(map(ord, data)))
 
     def _handle_unknown_option(self, data):
         logging.debug("client doesn't know VM command %d, dropping", hexdump(data))
@@ -528,7 +529,7 @@ class VMTelnetProxyClient(TelnetServer):
         data = data[2:]
 
         handled = False
-        if EXT_SUPPORTED.has_key(subcmd):
+        if subcmd in EXT_SUPPORTED:
             meth = '_handle_%s' % EXT_SUPPORTED[subcmd]
             if hasattr(self, meth):
                 getattr(self, meth)(data)

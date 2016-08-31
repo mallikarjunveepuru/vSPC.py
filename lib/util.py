@@ -52,4 +52,4 @@ def string_dump(s):
     """
     Translate a string into ASCII character codes & split with spaces.
     """
-    return " ".join(map(lambda x: str(ord(x)), list(s)))
+    return " ".join([str(ord(x)) for x in list(s)])

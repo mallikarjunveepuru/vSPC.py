@@ -29,7 +29,7 @@
 # authors and should not be interpreted as representing official policies, either expressed
 # or implied, of <copyright holder>.
 
-BASENAME = 'vSPC.py'
+BASENAME = b'vSPC.py'
 
 import logging
 import struct
@@ -47,30 +47,30 @@ UNACK_TIMEOUT = 0.5
 
 DEFAULT_VM_TX_PACKET_LEN = 8  # how many chars to send in each packet
 
-VMWARE_EXT = chr(232) # VMWARE-TELNET-EXT
+VMWARE_EXT = bytes([232]) # VMWARE-TELNET-EXT
 
-KNOWN_SUBOPTIONS_1 = chr(0) # + suboptions
-KNOWN_SUBOPTIONS_2 = chr(1) # + suboptions
-UNKNOWN_SUBOPTION_RCVD_1 = chr(2) # + code
-UNKNOWN_SUBOPTION_RCVD_2 = chr(3) # + code
-VMOTION_BEGIN = chr(40) # + sequence
-VMOTION_GOAHEAD = chr(41) # + sequence + secret
-VMOTION_NOTNOW = chr(43) # + sequence + secret
-VMOTION_PEER = chr(44) # + sequence + secret
-VMOTION_PEER_OK = chr(45) # + sequence + secret
-VMOTION_COMPLETE = chr(46) # + sequence
-VMOTION_ABORT = chr(48) # <EOM> (?)
-DO_PROXY = chr(70) # + [CS] + URI
-WILL_PROXY = chr(71) # <EOM>
-WONT_PROXY = chr(73) # <EOM>
-VM_VC_UUID = chr(80) # + uuid
-GET_VM_VC_UUID = chr(81) # <EOM>
-VM_NAME = chr(82) # + name
-GET_VM_NAME = chr(83) # <EOM>
-VM_BIOS_UUID = chr(84) # + bios uuid
-GET_VM_BIOS_UUID = chr(85) # <EOM>
-VM_LOCATION_UUID = chr(86) # + location uuid
-GET_VM_LOCATION_UUID = chr(87) # <EOM>
+KNOWN_SUBOPTIONS_1 = bytes([0]) # + suboptions
+KNOWN_SUBOPTIONS_2 = bytes([1]) # + suboptions
+UNKNOWN_SUBOPTION_RCVD_1 = bytes([2]) # + code
+UNKNOWN_SUBOPTION_RCVD_2 = bytes([3]) # + code
+VMOTION_BEGIN = bytes([40]) # + sequence
+VMOTION_GOAHEAD = bytes([41]) # + sequence + secret
+VMOTION_NOTNOW = bytes([43]) # + sequence + secret
+VMOTION_PEER = bytes([44]) # + sequence + secret
+VMOTION_PEER_OK = bytes([45]) # + sequence + secret
+VMOTION_COMPLETE = bytes([46]) # + sequence
+VMOTION_ABORT = bytes([48]) # <EOM> (?)
+DO_PROXY = bytes([70]) # + [CS] + URI
+WILL_PROXY = bytes([71]) # <EOM>
+WONT_PROXY = bytes([73]) # <EOM>
+VM_VC_UUID = bytes([80]) # + uuid
+GET_VM_VC_UUID = bytes([81]) # <EOM>
+VM_NAME = bytes([82]) # + name
+GET_VM_NAME = bytes([83]) # <EOM>
+VM_BIOS_UUID = bytes([84]) # + bios uuid
+GET_VM_BIOS_UUID = bytes([85]) # <EOM>
+VM_LOCATION_UUID = bytes([86]) # + location uuid
+GET_VM_LOCATION_UUID = bytes([87]) # <EOM>
 
 EXT_SUPPORTED = {
     KNOWN_SUBOPTIONS_1 : 'known_options', # VM->Proxy
@@ -101,7 +101,7 @@ telnet client. This port is intended for VMware connections only.\r
 '''
 
 def hexdump(data):
-    return reduce(lambda x, y: x + ('%x' % ord(y)), data, '')
+    return reduce(lambda x, y: x + ('%x' % y), data, '')
 
 class FixedTelnet(Telnet):
     '''
@@ -123,14 +123,14 @@ class FixedTelnet(Telnet):
         XXX - Sigh, this is a cut and paste from telnetlib to fix a
         bug in the processing of NULL suring an SB..SE sequence. -ZML
         """
-        buf = ['', '']
+        buf = [b'', b'']
         try:
             while self.rawq:
                 c = self.rawq_getchar()
                 if not self.iacseq:
                     if self.sb == 0 and c == theNULL:
                         continue
-                    if self.sb == 0 and c == "\021":
+                    if self.sb == 0 and c == b"\021":
                         continue
                     if c != IAC:
                         buf[self.sb] = buf[self.sb] + c
@@ -143,17 +143,17 @@ class FixedTelnet(Telnet):
                         self.iacseq += c
                         continue
 
-                    self.iacseq = ''
+                    self.iacseq = b''
                     if c == IAC:
                         buf[self.sb] = buf[self.sb] + c
                     else:
                         if c == SB: # SB ... SE start.
                             self.sb = 1
-                            self.sbdataq = ''
+                            self.sbdataq = b''
                         elif c == SE:
                             self.sb = 0
                             self.sbdataq = self.sbdataq + buf[1]
-                            buf[1] = ''
+                            buf[1] = b''
                         if self.option_callback:
                             # Callback is supposed to look into
                             # the sbdataq
@@ -164,8 +164,8 @@ class FixedTelnet(Telnet):
                             # unless we did a WILL/DO before.
                             self.msg('IAC %d not recognized' % ord(c))
                 elif len(self.iacseq) == 2:
-                    cmd = self.iacseq[1]
-                    self.iacseq = ''
+                    cmd = self.iacseq[1:2]
+                    self.iacseq = b''
                     opt = c
                     if cmd in (DO, DONT):
                         self.msg('IAC %s %d',
@@ -182,7 +182,7 @@ class FixedTelnet(Telnet):
                         else:
                             self.sock.sendall(IAC + DONT + opt)
         except EOFError: # raised by self.rawq_getchar()
-            self.iacseq = '' # Reset on EOF
+            self.iacseq = b'' # Reset on EOF
             self.sb = 0
             pass
         self.cookedq = self.cookedq + buf[0]
@@ -359,14 +359,14 @@ class VMTelnetServer(TelnetServer):
         self.sock.sendall(IAC + SB + VMWARE_EXT + s + IAC + SE)
 
     def _handle_known_options(self, data):
-        logging.debug("client knows VM commands: %s", list(map(ord, data)))
+        logging.debug("client knows VM commands: %s", list(data))
 
     def _handle_unknown_option(self, data):
         logging.debug("client doesn't know VM command %d, dropping",
                       hexdump(data))
 
     def _handle_do_proxy(self, data):
-        dir = 'client' if data[:1] == "C" else 'server'
+        dir = 'client' if data[:1] == b"C" else 'server'
         uri = data[1:]
         logging.debug("client wants to proxy %s to %s", dir, uri)
         if dir == 'server' and uri == BASENAME:
@@ -403,7 +403,7 @@ class VMTelnetServer(TelnetServer):
         self.handler.handle_vmotion_abort(self)
 
     def _handle_vc_uuid(self, data):
-        data = data.replace(' ', '')
+        data = data.replace(b' ', b'')
         if not self.uuid:
             self.uuid = data
             self.handler.handle_vc_uuid(self)

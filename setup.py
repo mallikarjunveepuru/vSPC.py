@@ -19,7 +19,6 @@ setup(
     url = "https://github.com/isnotajoke/vSPC.py",
     package_dir = {'vSPC': 'lib'},
     scripts = [ 'vSPCClient', 'vSPCServer' ],
-    data_files = [('/etc/init.d', ['util/sysvinit/vSPCServer'])],
     packages=['vSPC'],
     #apparently this doesn't always work need to look into this
     #long_description=read('README.md'),

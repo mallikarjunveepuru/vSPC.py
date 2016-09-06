@@ -28,8 +28,8 @@
 # The views and conclusions contained in the software and documentation are those of the
 # authors and should not be interpreted as representing official policies, either expressed
 # or implied, of <copyright holder>.
+from __future__ import print_function
 
-import pickle as pickle
 import socket
 import sys
 
@@ -38,6 +38,11 @@ from telnetlib import BINARY, SGA
 from .telnet import TelnetServer
 from .poll import Poller
 from .util import prepare_terminal, restore_terminal
+
+try:
+    import cPickle as pickle
+except ImportError:
+    import pickle
 
 # Query protocol
 Q_VERS        = 2

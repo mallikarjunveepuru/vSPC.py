@@ -33,7 +33,6 @@ import getopt
 import logging
 import optparse
 import os
-import pickle as pickle
 import signal
 import socket
 import string
@@ -42,6 +41,11 @@ import threading
 import queue
 
 from .admin import Q_VERS, Q_NAME, Q_UUID, Q_PORT, Q_OK, Q_VM_NOTFOUND, Q_LOCK_EXCL, Q_LOCK_WRITE, Q_LOCK_FFA, Q_LOCK_FFAR, Q_LOCK_BAD, Q_LOCK_FAILED
+
+try:
+    import cPickle as pickle
+except ImportError:
+    import pickle
 
 class vSPCBackendMemory:
     ADMIN_THREADS = 4

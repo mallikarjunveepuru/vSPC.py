@@ -31,6 +31,8 @@
 
 BASENAME = b'vSPC.py'
 
+from builtins import bytes
+
 import logging
 import struct
 import time
@@ -101,7 +103,7 @@ telnet client. This port is intended for VMware connections only.\r
 '''
 
 def hexdump(data):
-    return reduce(lambda x, y: x + ('%x' % y), data, '')
+    return reduce(lambda x, y: x + ('%s' % y), data, '')
 
 class FixedTelnet(Telnet):
     '''

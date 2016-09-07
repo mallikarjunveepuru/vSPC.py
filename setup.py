@@ -20,6 +20,7 @@ setup(
     package_dir = {'vSPC': 'lib'},
     scripts = [ 'vSPCClient', 'vSPCServer' ],
     packages=['vSPC'],
+    install_requires=['future'],
     #apparently this doesn't always work need to look into this
     #long_description=read('README.md'),
     classifiers=[

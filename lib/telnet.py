@@ -281,7 +281,7 @@ class TelnetServer(FixedTelnet):
     def negotiation_done(self):
         self.process_available()
         if self.unacked:
-            desc = [(ord(x_y[0]), ord(x_y[1])) for x_y in self.unacked]
+            desc = [(ord(x), ord(y)) for x, y in self.unacked]
             if time.time() > self.last_ack + UNACK_TIMEOUT:
                 logging.debug("timeout waiting for commands %s", desc)
                 self.unacked = []

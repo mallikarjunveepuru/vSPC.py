@@ -130,23 +130,6 @@ backend should inherit from vSPC.backend:vSPCBackendMemory.
 
 Use --help with the desired --backend for help using that backend.
 
-# Building the distribution
-
-source distribution
-```
-/path/to/your/python setup.py sdist
-```
-
-binary distribution
-```
-/path/to/your/python setup.py bdist
-```
-
-build RPM
-```
-/path/to/your/python setup.py bdist_rpm
-```
-
 # Authors
 
 - Zach Loafman (initial implementation)

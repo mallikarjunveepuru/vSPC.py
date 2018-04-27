@@ -16,7 +16,7 @@ setup(
                    "available in ESXi 4.1+."),
     license = "BSD",
     keywords = "ESX VMWare serial port concentrator",
-    url = "https://github.com/isnotajoke/vSPC.py",
+    url = "https://github.com/romracer/vSPC.py",
     package_dir = {'vSPC': 'lib'},
     scripts = [ 'vSPCClient', 'vSPCServer' ],
     packages=['vSPC'],
